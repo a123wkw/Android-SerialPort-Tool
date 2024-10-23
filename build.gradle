@@ -7,9 +7,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:4.0.1'
-
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
+        // 注意：不要在此处放置应用依赖，它们应该位于各个模块的build.gradle文件中
     }
 }
 
@@ -18,17 +16,19 @@ allprojects {
         google()
         jcenter()
         maven { url 'https://jitpack.io' }
+        // 添加其他仓库，如果需要的话
     }
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
+    // 清除构建目录
 }
 
-
+// 定义项目通用的配置变量
 ext {
     compileSdkVersion = 29
-
     minSdkVersion = 15
     targetSdkVersion = 22
+    // 可以在此处添加其他通用的配置参数
 }
