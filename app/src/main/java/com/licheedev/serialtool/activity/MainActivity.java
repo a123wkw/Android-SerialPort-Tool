@@ -174,36 +174,43 @@ public class MainActivity extends BaseActivity implements AdapterView.OnItemSele
      *
      * @param isSerialPortOpened
      */
-    private void updateViewState(boolean isSerialPortOpened) {
+    /**
+     * 更新界面状态以反映串口的开闭状态
+     *
+     * @param isSerialPortOpen 表示串口是否已打开的布尔值
+     */
+    private void updateUIState(boolean isSerialPortOpen) {
+        // 根据串口状态设置按钮文本
+        int buttonLabelResourceId = isSerialPortOpen ? R.string.close_serial_port : R.string.open_serial_port;
+        mBtnOpenDevice.setText(buttonLabelResourceId);
 
-        int stringRes = isSerialPortOpened ? R.string.close_serial_port : R.string.open_serial_port;
-
-        mBtnOpenDevice.setText(stringRes);
-
-        mSpinnerDevices.setEnabled(!isSerialPortOpened);
-        mSpinnerBaudrate.setEnabled(!isSerialPortOpened);
-        mBtnSendData.setEnabled(isSerialPortOpened);
-        mBtnLoadList.setEnabled(isSerialPortOpened);
+        // 根据串口状态启用或禁用控件
+        mSpinnerDevices.setEnabled(!isSerialPortOpen);
+        mSpinnerBaudrate.setEnabled(!isSerialPortOpen);
+        mBtnSendData.setEnabled(isSerialPortOpen);
+        mBtnLoadList.setEnabled(isSerialPortOpen);
     }
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-
-        // Spinner 选择监听
+        // 处理下拉列表项的选择事件
         switch (parent.getId()) {
             case R.id.spinner_devices:
-                mDeviceIndex = position;
-                mDevice.setPath(mDevices[mDeviceIndex]);
+                mCurrentDeviceIndex = position;
+                mCurrentDevice.setPath(mDevicePaths[mCurrentDeviceIndex]);
                 break;
             case R.id.spinner_baudrate:
-                mBaudrateIndex = position;
-                mDevice.setBaudrate(mBaudrates[mBaudrateIndex]);
+                mCurrentBaudrateIndex = position;
+                mCurrentDevice.setBaudrate(mBaudrateOptions[mCurrentBaudrateIndex]);
+                break;
+            default:
+                // 如果有其他 Spinner，可以在这里处理
                 break;
         }
     }
 
     @Override
     public void onNothingSelected(AdapterView<?> parent) {
-        // 空实现
+        // 当没有任何选项被选中时，这里不做任何操作
+        // 通常情况下，此方法可以保持为空实现
     }
-}
