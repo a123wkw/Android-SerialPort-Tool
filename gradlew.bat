@@ -1,90 +1,135 @@
-@if "%DEBUG%" == "" @echo off
-@rem ##########################################################################
+@echo off
+@rem #################################################################
+@rem 
+@rem  增强版 Gradle Windows 启动脚本
+@rem  新增功能: 自动检测JDK版本并显示构建环境信息
 @rem
-@rem  Gradle startup script for Windows
-@rem
-@rem ##########################################################################
+@rem #################################################################
 
-@rem Set local scope for the variables with windows NT shell
-if "%OS%"=="Windows_NT" setlocal
+:: 启用延迟变量扩展和错误检查
+if "%OS%"=="Windows_NT" setlocal enabledelayedexpansion
 
-@rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+:: 初始化配置
 set DEFAULT_JVM_OPTS=
-
 set DIRNAME=%~dp0
-if "%DIRNAME%" == "" set DIRNAME=.
+if "%DIRNAME%"=="" set DIRNAME=.
 set APP_BASE_NAME=%~n0
 set APP_HOME=%DIRNAME%
 
-@rem Find java.exe
-if defined JAVA_HOME goto findJavaFromJavaHome
+:: 新增功能: 显示环境信息
+call :show_build_info
 
-set JAVA_EXE=java.exe
-%JAVA_EXE% -version >NUL 2>&1
-if "%ERRORLEVEL%" == "0" goto init
+:: 查找Java可执行文件
+if defined JAVA_HOME (
+    call :find_java_from_home
+) else (
+    call :find_java_in_path
+)
 
-echo.
-echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
-echo.
-echo Please set the JAVA_HOME variable in your environment to match the
-echo location of your Java installation.
+if "%ERRORLEVEL%"=="0" goto execute
 
-goto fail
-
-:findJavaFromJavaHome
-set JAVA_HOME=%JAVA_HOME:"=%
-set JAVA_EXE=%JAVA_HOME%/bin/java.exe
-
-if exist "%JAVA_EXE%" goto init
-
-echo.
-echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME%
-echo.
-echo Please set the JAVA_HOME variable in your environment to match the
-echo location of your Java installation.
-
-goto fail
-
-:init
-@rem Get command-line arguments, handling Windowz variants
-
-if not "%OS%" == "Windows_NT" goto win9xME_args
-if "%@eval[2+2]" == "4" goto 4NT_args
-
-:win9xME_args
-@rem Slurp the command line arguments.
-set CMD_LINE_ARGS=
-set _SKIP=2
-
-:win9xME_args_slurp
-if "x%~1" == "x" goto execute
-
-set CMD_LINE_ARGS=%*
-goto execute
-
-:4NT_args
-@rem Get arguments from the 4NT Shell from JP Software
-set CMD_LINE_ARGS=%$
-
+:: 执行Gradle
 :execute
-@rem Setup the command line
-
 set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
 
-@rem Execute Gradle
-"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %CMD_LINE_ARGS%
+:: 新增: 构建开始时间记录
+set BUILD_START_TIME=%TIME%
 
-:end
-@rem End local scope for the variables with windows NT shell
-if "%ERRORLEVEL%"=="0" goto mainEnd
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% ^
+    "-Dorg.gradle.appname=%APP_BASE_NAME%" ^
+    -classpath "%CLASSPATH%" ^
+    org.gradle.wrapper.GradleWrapperMain %CMD_LINE_ARGS%
+
+:: 新增: 构建耗时计算
+call :calculate_build_time
+
+goto end
+
+:: **************************
+:: 新增功能函数区域
+:: **************************
+
+:show_build_info
+    echo.
+    echo [构建环境信息]
+    ver | find "Version"
+    echo Gradle项目目录: %APP_HOME%
+    goto :eof
+
+:find_java_from_home
+    set JAVA_HOME=%JAVA_HOME:"=%
+    set JAVA_EXE=%JAVA_HOME%\bin\java.exe
+    
+    if exist "%JAVA_EXE%" (
+        "%JAVA_EXE%" -version 2>nul
+        if "%ERRORLEVEL%"=="0" (
+            echo 使用的JDK路径: %JAVA_EXE%
+            goto :eof
+        )
+    )
+    
+    echo.
+    echo ERROR: JAVA_HOME指向无效的JDK目录: %JAVA_HOME%
+    goto fail
+
+:find_java_in_path
+    set JAVA_EXE=java.exe
+    %JAVA_EXE% -version 2>nul
+    
+    if "%ERRORLEVEL%"=="0" (
+        for /f "tokens=2 delims==" %%a in ('%JAVA_EXE% -XshowSettings:properties -version 2^>^&1 ^| find "java.home"') do (
+            set JAVA_HOME=%%a
+            echo 自动发现的JDK路径: !JAVA_HOME!
+        )
+        goto :eof
+    )
+    
+    echo.
+    echo ERROR: 未设置JAVA_HOME且在PATH中找不到java命令
+    goto fail
+
+:calculate_build_time
+    set BUILD_END_TIME=%TIME%
+    
+    :: 计算构建耗时
+    call :time_diff "%BUILD_START_TIME%" "%BUILD_END_TIME%"
+    echo 构建耗时: !DIFF_RESULT!
+    goto :eof
+
+:time_diff
+    :: 时间差计算函数
+    setlocal
+    call :parse_time %1
+    set /a START=(%HH%*3600 + %MM%*60 + %SS%)
+    
+    call :parse_time %2
+    set /a END=(%HH%*3600 + %MM%*60 + %SS%)
+    
+    set /a DIFF=%END%-%START%
+    
+    set /a DIFF_H=%DIFF%/3600
+    set /a DIFF_M=(%DIFF%-%DIFF_H%*3600)/60
+    set /a DIFF_S=%DIFF%-%DIFF_H%*3600-%DIFF_M%*60
+    
+    endlocal & set DIFF_RESULT=%DIFF_H%小时 %DIFF_M%分钟 %DIFF_S%秒
+    goto :eof
+
+:parse_time
+    :: 解析时间格式
+    for /f "tokens=1-3 delims=:.," %%a in ("%~1") do (
+        set HH=%%a
+        set MM=%%b
+        set SS=%%c
+    )
+    goto :eof
+
+:: **************************
+:: 原有功能保持不变
+:: **************************
 
 :fail
-rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of
-rem the _cmd.exe /c_ return code!
-if  not "" == "%GRADLE_EXIT_CONSOLE%" exit 1
-exit /b 1
+    if not "" == "%GRADLE_EXIT_CONSOLE%" exit 1
+    exit /b 1
 
-:mainEnd
-if "%OS%"=="Windows_NT" endlocal
-
-:omega
+:end
+    if "%OS%"=="Windows_NT" endlocal
